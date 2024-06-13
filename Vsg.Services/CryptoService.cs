@@ -14,6 +14,7 @@ namespace Vsg.Services
         private readonly IRepository<CryptoPrices> _priceRepository;
         private readonly IMemoryCache _cache;
 
+
         public CryptoService( IRepository<CryptoPrices> priceRepository, IMemoryCache cache)
         {
           
