@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Vsg.DataModels
 {
     /// <summary>
     /// Crypto Kline DB table.
     /// </summary>
+    [Table("CryptoPrices")]
     public class CryptoPrices
     {
         /// <summary>
@@ -16,17 +18,22 @@ namespace Vsg.DataModels
         /// <summary>
         /// Close price
         /// </summary>
+        [Key]
         public decimal LastPrice { get; set; }
 
         /// <summary>
-        /// Keeps periods - 1m, 1h, 1d, 1w, 1M
+        /// Keeps periods - 1m, 5m, 30m, 1h, 1d, 1w, 1M
         /// </summary>
-        public string? Interval { get; set; }
+        [Key]
+        [MaxLength(3)]
+        public string Interval { get; set; }
 
         /// <summary>
         /// Crypto symbol name
         /// </summary>
-        public string? Symbol { get; set; }
+        [Key]
+        [MaxLength(32)]
+        public string Symbol { get; set; }
 
     }
 }

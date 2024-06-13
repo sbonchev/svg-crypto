@@ -16,13 +16,15 @@ namespace Vsg.Services
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            //modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
 
             modelBuilder.Entity<CryptoPrices>(entity =>
             {
-                entity.Property(p => p.LastPrice).HasPrecision(18, 8);
-
-                entity.HasIndex(p => p.Symbol);
-                entity.HasIndex(p => p.LastPrice);
+                entity.Property(p => p.LastPrice).HasPrecision(19, 4);
+                entity.HasKey(p => p.Symbol);
+                entity.HasKey(p => p.LastPrice);
+                entity.HasKey(p => p.Interval);
+                entity.HasKey(p => p.CloseTime);
             });
         }
     }

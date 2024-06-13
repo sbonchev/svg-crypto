@@ -9,7 +9,7 @@ namespace Vsg.DataModels
     public class KlineDetails
     {
         /// <summary>
-        /// Keeps periods - 1m, 1h, 1d, 1w, 1M
+        /// Keeps periods - 1m, 5m, 30m, 1h, 1d, 1w, 1M
         /// </summary>
         [JsonPropertyName("i")]
         public string? Interval { get; set; }

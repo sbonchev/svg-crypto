@@ -9,3 +9,4 @@ D:\proj\Tests\Vsg\Vsg.DataModels\obj\Debug\net8.0\Vsg.DataModels.dll
 D:\proj\Tests\Vsg\Vsg.DataModels\obj\Debug\net8.0\refint\Vsg.DataModels.dll
 D:\proj\Tests\Vsg\Vsg.DataModels\obj\Debug\net8.0\Vsg.DataModels.pdb
 D:\proj\Tests\Vsg\Vsg.DataModels\obj\Debug\net8.0\ref\Vsg.DataModels.dll
+D:\proj\Tests\Vsg\Vsg.DataModels\obj\Debug\net8.0\Vsg.DataModels.sourcelink.json

@@ -1,23 +1,19 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Vsg.DataModels; 
 
 namespace Vsg.Services
 {
-    public class CryptoService //:  IRepository<CryptoPrices>
+    public class CryptoService : ICryptoService
     {
-       
-        private readonly IRepository<CryptoPrices> _priceRepository;
+
+        private readonly IRepositoryService<CryptoPrices> _priceRepository;
         private readonly IMemoryCache _cache;
+        private const int CashTime = 5;
 
 
-        public CryptoService( IRepository<CryptoPrices> priceRepository, IMemoryCache cache)
+        public CryptoService(IRepositoryService<CryptoPrices> priceRepository, IMemoryCache cache)
         {
-          
+
             _priceRepository = priceRepository;
             _cache = cache;
         }
@@ -29,43 +25,78 @@ namespace Vsg.Services
             {
                 return cachedPrice;
             }
-
             try
             {
-                var avgPrice = await _priceRepository.Get24hAvgPriceAsync(symbol);
-                _cache.Set(cacheKey, avgPrice, TimeSpan.FromMinutes(10));
+                var srvResult = await _priceRepository.GetAllAsync(crp => crp.Symbol == symbol
+                                                                  && crp.Interval == $"1{TimeIntervals.h}");
+                var avgPrices = srvResult.OrderBy(t => t.LastPrice)
+                                        .Select(p => p.LastPrice);
+                if (avgPrices.Count() < 24)
+                    throw new ArgumentException("Not sufficient date-points.");
+
+                var avgPrice = avgPrices.TakeLast(24).Average();
+                _cache.Set(cacheKey, avgPrice, TimeSpan.FromMinutes(CashTime));
+
                 return avgPrice;
             }
-            catch (ExceptionHandler ex)
+            catch (Exception ex)
             {
-                throw new ExceptionHandler($"Error in service: {ex.Message}", ex.ErrorCode, ex);
+                throw new Exception($"Error in service: {ex.Message} \n {ex.StackTrace}");
             }
         }
 
-        public async Task<decimal> GetSimpleMovingAverageAsync(string symbol, int n, string p, DateTime? s)
+        public async Task<decimal> GetSimpleMovingAvgAsync(string symbol, int n, string p, DateTime? s)
         {
-            TimeSpan timePeriod = p switch
+            var period = p.ToLower().Trim();
+            bool isPeriod = period == "1w" || period == "1d" || period == "1w" || period == "5m" || period == "30m";
+            if (!isPeriod)
             {
-                "1w" => TimeSpan.FromDays(7),
-                "1d" => TimeSpan.FromDays(1),
-                "30m" => TimeSpan.FromMinutes(30),
-                "5m" => TimeSpan.FromMinutes(5),
-                "1m" => TimeSpan.FromMinutes(1),
-                _ => throw new ArgumentException("Invalid time period."),
+                throw new ArgumentException("Invalid time period.");
             };
+            var cacheKey = $"{symbol}_SimpleMovingAvg";
+            if (_cache.TryGetValue(cacheKey, out decimal cachedPrice))
+            {
+                return cachedPrice;
+            }
 
             try
             {
-                var sma = await _priceRepository.GetSimpleMovingAverageAsync(symbol, n, timePeriod, s);
-                return sma;
+                bool isStartFromNow = false;
+                DateTime start;
+                if (s == null)
+                {
+                    start = DateTime.UtcNow;
+                    isStartFromNow = true;
+                }
+                else
+                {
+                    start = s.Value;
+                }
+                var dtStartStamp = start.Ticks;
+
+                var dataPoints = await _priceRepository.GetAllAsync(crp => crp.Symbol == symbol
+                                                                    && isStartFromNow
+                                                                    ? crp.CloseTime <= dtStartStamp
+                                                                    : crp.CloseTime >= dtStartStamp
+                                                                    && crp.Interval == period);
+                var avgPrices = dataPoints.OrderBy(t => t.LastPrice)
+                                          .Select(p => p.LastPrice);
+
+                if (avgPrices.Count() < n)
+                    throw new ArgumentException("Not sufficient date-points.");
+
+                var avgSimplePrice = avgPrices.TakeLast(n).Average();
+                _cache.Set(cacheKey, avgSimplePrice, TimeSpan.FromMinutes(CashTime));
+
+                return avgSimplePrice;
             }
-            catch (ExceptionHandler ex)
+            catch (Exception ex)
             {
-                throw new ExceptionHandler($"Error in service: {ex.Message}", ex.ErrorCode, ex);
+                throw new Exception($"An error occurred while calculating SMA: {ex.Message} \n {ex.StackTrace}");
             }
+
         }
     }
 }
 
-    }
-}
+
