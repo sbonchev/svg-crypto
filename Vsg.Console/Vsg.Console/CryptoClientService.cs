@@ -8,6 +8,9 @@ using Websocket.Client;
 
 namespace Vsg.Console
 {
+    /// <summary>
+    /// Background service implementation for DB collecting Biance crypto info.
+    /// </summary>
     public class CryptoClientService : BackgroundService
     {
         private const string Url = "wss://stream.binance.com:9443/ws";
@@ -77,7 +80,7 @@ namespace Vsg.Console
 
             using (var scope = _serviceProvider.CreateScope())
             {
-                var priceRepository = scope.ServiceProvider.GetRequiredService<IRepositoryService<object>>();
+                var priceRepository = scope.ServiceProvider.GetRequiredService<IRepositoryService<CryptoPrices>>();
                 var priceCrypto = new CryptoPrices
                 {
                     Symbol = data.Symbol.ToLower().Trim(),

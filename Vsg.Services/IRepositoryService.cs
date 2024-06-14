@@ -15,8 +15,6 @@ namespace Vsg.Services
         /// <returns></returns>
         Task<List<T>> GetAllAsync(Expression<Func<T, bool>> filter = null);
 
-        Task<T> GetFirstOrDefaultAsync(Expression<Func<T, bool>> where);
-
         /// <summary>
         /// Update or add the selected entity.
         /// </summary>

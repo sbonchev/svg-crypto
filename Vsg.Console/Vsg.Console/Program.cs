@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Vsg.Console;
+using Vsg.DataModels;
 
 class Program
 {
@@ -78,6 +80,8 @@ class Program
 
                 services.AddScoped<ICryptoService, CryptoService>();
                 services.AddScoped(typeof(IRepositoryService<>), typeof(RepositoryService<>));
+
+                services.AddHostedService<CryptoClientService>();
 
                 services.AddDbContext<CryptoDbContextService>(options =>
                     options.UseSqlServer(connectionString));

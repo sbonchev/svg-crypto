@@ -30,11 +30,6 @@ namespace Vsg.Services
                 : await _entities.Where(filter).ToListAsync();
         }
 
-        public async Task<T> GetFirstOrDefaultAsync(Expression<Func<T, bool>> where)
-        {
-            return await _entities.FirstOrDefaultAsync(where);
-        }
-
         /// <summary>
         /// Update or add the selected entity.
         /// </summary>
@@ -46,7 +41,10 @@ namespace Vsg.Services
             if (isUpdate)
                 _entities.Update(entity);
             else
-                await _entities.AddAsync(entity);
+            {
+                if(_entities.FirstOrDefault(e => e == entity) == null) //-- checks if the row has been already inserted
+                    await _entities.AddAsync(entity);
+            }
 
             await _context.SaveChangesAsync();
         }
