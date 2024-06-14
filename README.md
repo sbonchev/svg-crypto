@@ -1,8 +1,6 @@
 # Vsg.CryptoBinanceApi
 
-Vsg.CryptoBinanceApi is a extensible solution based on Binance Crypto-Socket for providing real-time and historical cryptocurrency price data. It comprises a web API (`Vsg.Web.Api`) for serving price data and also a console application (`Vsg.Console`) for command-line interactions including background service for collecting historical crypto data. The application structure consists also class libraries for managing data logic and utility services.
-
-## Table of Contents
+Vsg.CryptoBinanceApi is a extensible solution based on Binance Crypto-Socket for providing real-time and historical cryptocurrency price data. It comprises a web API (`Vsg.Web.Api`) for serving price data and also a console application (`Vsg.Console`) for command-line interactions including a background service for collecting historical crypto data. The application structure consists also class libraries for managing data logic and utility help services.
 
 ## Introduction
 Vsg.CryptoBinanceApi is an implementation based on Binance web-socket-streams solution 
@@ -13,7 +11,6 @@ The Kline/Candlestick Stream push updates to the current klines/candlestick ever
 **Kline/Candlestick chart intervals:**
 
 s-> seconds; m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
-
 * 1s
 * 1m
 * 3m
@@ -30,6 +27,7 @@ s-> seconds; m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
 * 3d
 * 1w
 * 1M
+  
 Example:
 {"e":"kline","E":1718201531114,"s":"BTCUSDT",
   k":{"t":1717977600000,"T":1718582399999,"s":"BTCUSDT","i":"1w"
@@ -59,6 +57,29 @@ n=the number of total periods
 * Json serialization converters
   
 ### 2. Vsg.Services
-* 
+* CryptoDbContextService is implementation of Db sets and settings  based on DbContext class
+* RepositoryService<T> is generic represention of the base CRUD operations
+* CryptoService implements the task required basic operations - Get24hAvgPriceAsync(string symbol) and GetSimpleAvgMovingAsync(string symbol, int n, string p, DateTime? s)
+
+### 3.  Vsg.Console 
+* CryptoClientService works as a BackgroundService for collecting the Biance-socket information for the required crypto currences ("btcusdt", "adausdt", "ethusdt") and related periods (1w, 1d, 30m, 5m, 1m):
+- create Biance-Kline url: wss://stream.binance.com:9443/ws/btcusdt@kline_1M/adausdt@kline_1M/ethusdt@kline_1M/btcusdt@kline_1w/adausdt@kline_1w/ethusdt@kline_1w/btcusdt@kline_1h/adausdt@kline_1h/ethusdt@kline_1h/btcusdt@kline_1d/adausdt@kline_1d/ethusdt@kline_1d/btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_30m/adausdt@kline_1m/adausdt@kline_5m/adausdt@kline_30m/ethusdt@kline_1m/ethusdt@kline_5m/ethusdt@kline_30m
+* Console application also provides execution the following commands:
+24h {symbol} - Same as the /api/{symbol}/24hAvgPrice endpoint by Get24hAvgPrice
+sma {symbol} {n} {p} {s} - Same as the /api/{symbol}/SimpleMovingAverage endpoint by GetSimpleMovingAvgAsync
+
+### 4. Vsg.Web.Api HTTP API implemented in BianceCryptoController which can accept and return both XML and JSON ( depending on Content-Type Header ) with the following endpoints:
+* GET /api/{symbol}/24hAvgPrice - Returns the average price for the last 24h of data in the database ( or the oldest available, if 24h of data is not available )
+{symbol} - The symbol the average price is being calculated for
+* GET /api/{symbol}/SimpleAvgMoving?n={numberOfDataPoints}&p={timePeriod}&s=[startDateTime] - Return the current Simple Moving average of the symbol's price ( More info: Investopedia)
+{symbol} - The symbol the average price is being calculated for
+n - The amount of data points
+p - The time period represented by each data point. Acceptable values: 1w, 1d, 30m, 5m, 1m
+s - The datetime from which to start the SMA calculation ( a date )
+
+### 5. Vsg.CryptoBinanceApi application Setup 
+* Use MSSQL (Express) Server
+* Restore CryptoServiveDb.sql DB sript (creat DB and inserts historical data for testing) lacated in ./Vsg.DataModels
+* Fix the connection string in appsettings.json with your own proper one.
    
 
