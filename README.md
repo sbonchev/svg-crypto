@@ -42,7 +42,7 @@ Example:
 * Note that `E` (event time), `t` (start time) and `T` (close time) in the payload are Unix timestamps, which are always interpreted in UTC.
 
 **Stream Name:** \<symbol\>@kline_\<interval\>@+08:00
-### Average price streams push changes in the average price over a fixed time interval based on close timestamp.
+### Average price streams push changes in the average price over a fixed time interval based on close-time timestamp.
 **Moving average (SMA) is an arithmetic moving average calculated by adding recent prices and then dividing that figure by the number of time periods in the calculation average. For example, one could add the closing price of a security for a number of time periods and then divide this total by that same number of periods. Short-term averages respond quickly to changes in the price of the underlying security, while long-term averages are slower to react.**
 The formula for SMA is:
 SMA = 𝐴1+𝐴2+...+𝐴𝑛/𝑛
