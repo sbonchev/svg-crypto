@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "p4Z41YS01ZDDPsB6/M5ImU9OeL3q3BOoocY/frrw4Bo=",
+  "Source": "Vsg.Web.Api",
+  "BasePath": "_content/Vsg.Web.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

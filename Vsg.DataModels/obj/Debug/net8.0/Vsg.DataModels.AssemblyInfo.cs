@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Vsg.DataModels")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+28706e529772d4ab75bceb05524cc43b62eea4c1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1cd8b3a5a17da54d298ef1c1ea1c4155fb650fcc")]
 [assembly: System.Reflection.AssemblyProductAttribute("Vsg.DataModels")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Vsg.DataModels")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

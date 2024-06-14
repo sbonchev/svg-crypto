@@ -3,12 +3,15 @@ using Vsg.DataModels;
 
 namespace Vsg.Services
 {
+    /// <summary>
+    /// CryptoService for calculating 24h price & simple movment average.
+    /// </summary>
     public class CryptoService : ICryptoService
     {
 
         private readonly IRepositoryService<CryptoPrices> _priceRepository;
         private readonly IMemoryCache _cache;
-        private const int CashTime = 5;
+        private const int CashTime = 1;
 
 
         public CryptoService(IRepositoryService<CryptoPrices> priceRepository, IMemoryCache cache)
@@ -29,12 +32,14 @@ namespace Vsg.Services
             {
                 var srvResult = await _priceRepository.GetAllAsync(crp => crp.Symbol == symbol
                                                                   && crp.Interval == $"1{TimeIntervals.h}");
-                var avgPrices = srvResult.OrderBy(t => t.LastPrice)
-                                        .Select(p => p.LastPrice);
-                if (avgPrices.Count() < 24)
-                    throw new ArgumentException("Not sufficient date-points.");
-
-                var avgPrice = avgPrices.TakeLast(24).Average();
+                var avgPrices = srvResult.OrderBy(t => t.LastPrice) //-- for any case
+                                         .Select(p => p.LastPrice);
+                var hDatePointCount = avgPrices.Count();
+                if (hDatePointCount < 1)
+                    throw new ArgumentException("Not sufficient date-points!");
+                // --- By the task requirement: "average price for the last 24h of data in the database ( or the oldest available, if 24h of data is not available )"
+                var avgPrice = avgPrices.TakeLast(hDatePointCount>24?24:hDatePointCount)
+                                        .Average();
                 _cache.Set(cacheKey, avgPrice, TimeSpan.FromMinutes(CashTime));
 
                 return avgPrice;
@@ -53,27 +58,23 @@ namespace Vsg.Services
             {
                 throw new ArgumentException("Invalid time period.");
             };
-            var cacheKey = $"{symbol}_SimpleMovingAvg";
-            if (_cache.TryGetValue(cacheKey, out decimal cachedPrice))
-            {
-                return cachedPrice;
-            }
-
+            //if (_cache.TryGetValue($"{symbol}_SimpleMovingAvg", out decimal cachedPrice))
+            //    return cachedPrice;
             try
             {
                 bool isStartFromNow = false;
-                DateTime start;
-                if (s == null)
+                long dtStartStamp;
+                if (s == null) //-- Get DateTime Now
                 {
-                    start = DateTime.UtcNow;
+                    dtStartStamp = DateTimeOffset.Now.ToUnixTimeMilliseconds(); 
                     isStartFromNow = true;
                 }
-                else
+                else //-- user def. DateTime
                 {
-                    start = s.Value;
+                    DateTime startDt = s.Value;
+                    dtStartStamp = new DateTimeOffset(startDt.Year, startDt.Month, startDt.Day, 0, 0, 0, TimeSpan.Zero)
+                                       .ToUnixTimeMilliseconds();
                 }
-                var dtStartStamp = start.Ticks;
-
                 var dataPoints = await _priceRepository.GetAllAsync(crp => crp.Symbol == symbol
                                                                     && isStartFromNow
                                                                     ? crp.CloseTime <= dtStartStamp
@@ -86,7 +87,7 @@ namespace Vsg.Services
                     throw new ArgumentException("Not sufficient date-points.");
 
                 var avgSimplePrice = avgPrices.TakeLast(n).Average();
-                _cache.Set(cacheKey, avgSimplePrice, TimeSpan.FromMinutes(CashTime));
+                //_cache.Set($"{symbol}_SimpleMovingAvg", avgSimplePrice, TimeSpan.FromMinutes(CashTime));
 
                 return avgSimplePrice;
             }
