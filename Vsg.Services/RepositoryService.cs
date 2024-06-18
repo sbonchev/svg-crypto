@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Vsg.Services
@@ -18,12 +19,22 @@ namespace Vsg.Services
             _entities = context.Set<T>();
         }
 
+        public T? FirstOrDefault(Expression<Func<T, bool>> filter)
+        {
+            return _entities.FirstOrDefault<T>(filter);
+        }
+
+        public CryptoDbContextService GetContext()
+        {
+            return _context;
+        }
+
         /// <summary>
         /// Get a entity list by selected filter.
         /// </summary>
         /// <param name="filter">Expression filter.</param>
         /// <returns></returns>
-        public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>> filter = null)
+        public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null)
         {
             return filter == null
                 ? await _entities.ToListAsync()
@@ -42,8 +53,8 @@ namespace Vsg.Services
                 _entities.Update(entity);
             else
             {
-                if(_entities.FirstOrDefault(e => e == entity) == null) //-- checks if the row has been already inserted
-                    await _entities.AddAsync(entity);
+
+                await _entities.AddAsync(entity); 
             }
 
             await _context.SaveChangesAsync();

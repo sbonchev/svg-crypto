@@ -8,12 +8,16 @@ namespace Vsg.Services
     /// <typeparam name="T"></typeparam>
     public interface IRepositoryService<T> where T : class
     {
+        T? FirstOrDefault(Expression<Func<T, bool>> filter);
+
+        CryptoDbContextService GetContext();
+
         /// <summary>
         /// Get a entity list by selected filter.
         /// </summary>
         /// <param name="filter">Expression filter.</param>
         /// <returns></returns>
-        Task<List<T>> GetAllAsync(Expression<Func<T, bool>> filter = null);
+        Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null);
 
         /// <summary>
         /// Update or add the selected entity.

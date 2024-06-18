@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Identity.Client;
 using Vsg.DataModels; 
 
 namespace Vsg.Services
@@ -32,7 +33,10 @@ namespace Vsg.Services
             {
                 var srvResult = await _priceRepository.GetAllAsync(crp => crp.Symbol == symbol
                                                                   && crp.Interval == $"1{TimeIntervals.h}");
-                var avgPrices = srvResult.OrderBy(t => t.LastPrice) //-- for any case
+                var maxAvgId = srvResult.GroupBy(g => new { g.Symbol, g.Interval, g.CloseTime })
+                                         .Select(grp => grp.Max(m => m.IdAvg));
+                var avgPrices = srvResult.Where(dp => maxAvgId.Contains(dp.IdAvg))
+                                         .OrderBy(t => t.LastPrice)
                                          .Select(p => p.LastPrice);
                 var hDatePointCount = avgPrices.Count();
                 if (hDatePointCount < 1)
@@ -53,7 +57,7 @@ namespace Vsg.Services
         public async Task<decimal> GetSimpleMovingAvgAsync(string symbol, int n, string p, DateTime? s)
         {
             var period = p.ToLower().Trim();
-            bool isPeriod = period == "1w" || period == "1d" || period == "1w" || period == "5m" || period == "30m";
+            bool isPeriod = period == "1w" || period == "1d" || period == "1m" || period == "5m" || period == "30m";
             if (!isPeriod)
             {
                 throw new ArgumentException("Invalid time period.");
@@ -80,7 +84,11 @@ namespace Vsg.Services
                                                                     ? crp.CloseTime <= dtStartStamp
                                                                     : crp.CloseTime >= dtStartStamp
                                                                     && crp.Interval == period);
-                var avgPrices = dataPoints.OrderBy(t => t.LastPrice)
+                var maxAvgId = dataPoints.GroupBy(g => new { g.Symbol, g.Interval, g.CloseTime })
+                                         .Select(grp => grp.Max(m => m.IdAvg));
+
+                var avgPrices = dataPoints.Where(dp => maxAvgId.Contains(dp.IdAvg))
+                                          .OrderBy(t => t.LastPrice)
                                           .Select(p => p.LastPrice);
 
                 if (avgPrices.Count() < n)

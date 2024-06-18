@@ -4,10 +4,16 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Vsg.Console;
-using Vsg.DataModels;
 
 class Program
 {
+    /// <summary>
+    /// Console application, which can execute the following commands:
+    /// 24h {symbol}-Same as the / api /{ symbol}/ 24hAvgPrice endpoint
+    /// SMA {symbol} { n}{ p}{ s}-Same as the / api /{ symbol}/ SimpleMovingAverage endpoint
+    /// </summary>
+    /// <param name="args"></param>
+    /// <returns></returns>
     static async Task Main(string[] args)
     {
         var host = CreateHostBuilder(args).Build();
@@ -39,12 +45,12 @@ class Program
 
             try
             {
-                if (inputArgs.Length < 3) // -- 24h AveragePrice
+                if (inputArgs.Length < 2) // -- 24h AveragePrice - only {symbol}
                 {
                     var avgPrice = await priceService.Get24hAvgPriceAsync(symbol);
                     Console.WriteLine($"24h Average Price for {symbol}: {avgPrice}");
                 }
-                else if (inputArgs.Length < 5) // -- sma
+                else if (inputArgs.Length > 1 && inputArgs.Length < 5) // -- SMA
                 {
                     Console.WriteLine($"Usage: sma symbol<{symbol}> n<{inputArgs[1]}> p<{inputArgs[2]}> [<s>]");
 

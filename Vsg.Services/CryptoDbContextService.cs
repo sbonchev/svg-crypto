@@ -25,6 +25,8 @@ namespace Vsg.Services
                 entity.HasKey(p => p.LastPrice);
                 entity.HasKey(p => p.Interval);
                 entity.HasKey(p => p.CloseTime);
+
+                entity.Property(b => b.IdAvg).ValueGeneratedNever();
             });
         }
     }
