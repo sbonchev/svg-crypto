@@ -1,15 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Runtime.Serialization;
-using System.Text.Json.Serialization;
 
 namespace Vsg.DataModels
 {
     /// <summary>
-    /// Crypto Kline DB table.
+    /// Crypto Kline collecting info DB table.
     /// </summary>
     [Table("CryptoPrices")]
-    public class CryptoPrices
+    public class CryptoPrices :CryptoBase
     {
         /// <summary>
         /// Kline's close time
@@ -36,13 +34,6 @@ namespace Vsg.DataModels
         [Key]
         [MaxLength(32)]
         public required string Symbol { get; set; }
-
-        /// <summary>
-        /// Db auto-increment field
-        /// </summary>
-        [JsonIgnore]
-        //[DatabaseGenerated(DatabaseGeneratedOption.None)]
-        public int IdAvg { get; set; }
 
     }
 }

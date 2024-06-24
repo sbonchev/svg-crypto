@@ -81,3 +81,13 @@ D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Vsg.Services.dll
 D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Vsg.Console.pdb
 D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Vsg.DataModels.pdb
 D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Vsg.Services.pdb
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Microsoft.Extensions.DependencyModel.dll
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Serilog.dll
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Serilog.AspNetCore.dll
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Serilog.Extensions.Hosting.dll
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Serilog.Formatting.Compact.dll
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Serilog.Settings.Configuration.dll
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Serilog.Sinks.Console.dll
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Serilog.Sinks.Debug.dll
+D:\proj\Tests\Vsg\Vsg.Web.Api\bin\Debug\net8.0\Serilog.Sinks.File.dll

@@ -1,9 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Net.WebSockets;
 using System.Text.Json;
 using Vsg.DataModels;
-//using TimeInt = Vsg.DataModels.TimeIntervals;
 using Vsg.Services;
 using Websocket.Client;
 
@@ -14,36 +15,50 @@ namespace Vsg.Console
     /// </summary>
     public class CryptoClientService : BackgroundService
     {
-        private const string Url = "wss://stream.binance.com:9443/ws";
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<ICryptoService> _logger;
-        private int Tdelay = 900;
+        private readonly IConfiguration _config;
+        private int Tdelay = 1000;
+        public static bool IsConsoleStart = false;
 
-        public CryptoClientService(IServiceProvider serviceProvider, ILogger<ICryptoService> logger)
+        public CryptoClientService(IServiceProvider serviceProvider, ILogger<ICryptoService> logger, IConfiguration config)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
+            _config = config;
         }
 
+        /// <summary>
+        /// Get Biance url for required crypto currences and related periods.
+        /// </summary>
         private string GetUrl
         {
             get
             {
-                var cryptos = new List<string> { "btcusdt", "adausdt", "ethusdt" };
+                var cryptos = _config.GetSection("DefCryptoCurrences")?
+                                     .Value?.Split(",").ToList<string>(); // -- ex.: "btcusdt", "adausdt", "ethusdt"
+                if (cryptos == null || cryptos.Count() < 1)
+                    throw new ArgumentException("There is no crypto-currency values definded into appsettings config!");
+
+                var url = _config.GetSection("URL").Value;
+                if (string.IsNullOrEmpty(url))
+                    throw new ArgumentException("There is no Biance URL definded into appsettings config!");
+
                 var klineCryptos = "";
                 foreach (var prd in Enum.GetValues<TimeIntervals>())
                 {
                     foreach (var klineCrypto in cryptos)
                     {
-                        klineCryptos += $"/{klineCrypto}@kline_1{prd}";
+                        var kcc = klineCrypto.ToLower().Trim();
+                        klineCryptos += $"/{kcc}@kline_1{prd}";
                         if (prd == TimeIntervals.m) // -- add 5m & 30m periods
                         {
-                            klineCryptos += $"/{klineCrypto}@kline_5{prd}";
-                            klineCryptos += $"/{klineCrypto}@kline_30{prd}";
+                            klineCryptos += $"/{kcc}@kline_5{prd}";
+                            klineCryptos += $"/{kcc}@kline_30{prd}";
                         }
                     }
                 }
-                return $"{Url}{klineCryptos}";
+                return $"{url}{klineCryptos}";
             }
         }
 
@@ -54,10 +69,19 @@ namespace Vsg.Console
                 client.MessageReceived.Subscribe(msg => HandleMessage(msg.Text), cancelToken);
 
                 await client.Start();
+
                 while (!cancelToken.IsCancellationRequested)
                 {
+                    if(!IsConsoleStart && !client.IsStarted)
+                    {
+                        await client.Start();
+                    }
+                    if(IsConsoleStart && client.IsStarted)
+                    {
+                         await client.Stop(WebSocketCloseStatus.NormalClosure, "Vsg.Console app working...");
+                    }
                     await Task.Delay(Tdelay);
-                }
+                } 
             }
         }
 
@@ -71,8 +95,12 @@ namespace Vsg.Console
                 var data = JsonSerializer.Deserialize<CryptoKline>(message);
                 if (data == null || string.IsNullOrEmpty(data.Symbol))
                 {
-                    _logger.LogWarning("Received invalid data: {Message}", message);
+                    _logger.LogWarning($"Received invalid data: {message}");
                     return;
+                }
+                if (data.ErrorCode > 0 || !string.IsNullOrEmpty(data.ErrorMessage)) {
+                    throw new BianceCryptoException($"Biance API Exception: Error Code - {data.ErrorCode} \n " +
+                                                    $"Error Message - {data.ErrorMessage}");
                 }
                 using (var scope = _serviceProvider.CreateScope())
                 {
@@ -90,36 +118,29 @@ namespace Vsg.Console
                                                              && e.LastPrice == priceCrypto.LastPrice);
                     if (crp == null) // -- checks if CryptoPrices entity is unique
                     {
-                        var id = priceRepository.GetContext().Prices.Any()
-                            ? priceRepository.GetContext().Prices.Max(p => p.IdAvg)
-                            : 0;
-                        priceCrypto.IdAvg = id + 1;
+                        priceCrypto.IdAvg = priceRepository.GetMaxAvgId;
                         priceRepository.UpdInertAsync(priceCrypto).Wait();
                     }
                 }
             }
+            catch (BianceCryptoException ex)
+            {
+                _logger.LogError(ex, $"Biance socket API error: {message}");
+                return;
+            }
             catch (JsonException ex)
             {
-                _logger.LogError(ex, "Error deserializing WebSocket message: {Message}", message);
+                _logger.LogError(ex, $"Error deserializing WebSocket error: {message}");
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error message: {message}");
                 return;
             }
         }
 
-        /// <summary>
-        /// Checks periods - 1m, 5m, 30m, 1h, 1d, 1w
-        /// </summary>
-        private bool IsPeriod(long timeClosed, string period)
-        {
-            const int ebs = 59;  // -- ebsylon = 3 secunds vs refreshing each 2s
-            long tc = timeClosed; //--/ 1000; //-- ms remove
-            var test = Math.Abs((tc / 60) * 60 - tc);
-            return $"1{TimeIntervals.m}" == period && Math.Abs((tc / 60) * 60  - tc) <= ebs
-                || $"5{TimeIntervals.m}" == period && Math.Abs((tc / 300) * 300 - tc) < ebs
-                || $"30{TimeIntervals.m}" == period && Math.Abs((tc / 1800) * 1800 - tc) < ebs
-                || $"1{TimeIntervals.h}" == period && Math.Abs((tc / 3600) * 3600 - tc) < ebs
-                || $"1{TimeIntervals.d}" == period && Math.Abs((tc / (3600 * 24)) * 3600 * 24 - tc) < ebs
-                || $"1{TimeIntervals.w}" == period && Math.Abs((tc / (3600 * 24 * 7)) * 3600 * 24 * 7 - tc) < ebs;
-        }
+        
     }
 
 }

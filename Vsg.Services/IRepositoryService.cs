@@ -1,4 +1,5 @@
 ﻿using System.Linq.Expressions;
+using Vsg.DataModels;
 
 namespace Vsg.Services
 {
@@ -6,11 +7,14 @@ namespace Vsg.Services
     /// Generic repository service interface.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public interface IRepositoryService<T> where T : class
+    public interface IRepositoryService<T> where T : CryptoBase
     {
         T? FirstOrDefault(Expression<Func<T, bool>> filter);
 
-        CryptoDbContextService GetContext();
+        /// <summary>
+        /// Get last avg id.
+        /// </summary>
+        int GetMaxAvgId { get; }
 
         /// <summary>
         /// Get a entity list by selected filter.

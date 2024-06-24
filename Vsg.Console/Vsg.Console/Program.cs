@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Vsg.Console;
+using Microsoft.Extensions.Logging;
 
 class Program
 {
@@ -21,14 +22,18 @@ class Program
         using var scope = host.Services.CreateScope();
         var priceService = scope.ServiceProvider.GetRequiredService<ICryptoService>();
 
-        Console.WriteLine("Start Crypto Price Console App!");
-        Console.WriteLine("  Write the <symbol> arg - Get 24h average price for a symbol");
-        Console.WriteLine("  Write the <symbol> <n> <p> <s> args - Get Simple Moving Average for a symbol, <s> is optional");
+        Console.WriteLine(" Start Crypto Price Console App!");
+        Console.WriteLine(" 1. Write the <symbol> arg - Get 24h average price for a symbol \n OR");
+        Console.WriteLine(" 2. Write the <symbol> <n> <p> <s> args - Get Simple Moving Average for a symbol, <s> is optional");
 
         while (true)
         {
+            Thread.Sleep(2000);
+            CryptoClientService.IsConsoleStart = true;
+
             Console.Write("\n Enter arguments: ");
             var input = Console.ReadLine();
+
             if (string.IsNullOrWhiteSpace(input))
             {
                 continue;
@@ -45,12 +50,12 @@ class Program
 
             try
             {
-                if (inputArgs.Length < 2) // -- 24h AveragePrice - only {symbol}
+                if (inputArgs.Length == 1) // -- 24h AveragePrice - only {symbol}
                 {
-                    var avgPrice = await priceService.Get24hAvgPriceAsync(symbol);
+                    var avgPrice = await priceService.Get24hAvgPriceAsync(symbol); //.ConfigureAwait();
                     Console.WriteLine($"24h Average Price for {symbol}: {avgPrice}");
                 }
-                else if (inputArgs.Length > 1 && inputArgs.Length < 5) // -- SMA
+                else if (inputArgs.Length > 2 && inputArgs.Length < 5) // -- SMA
                 {
                     Console.WriteLine($"Usage: sma symbol<{symbol}> n<{inputArgs[1]}> p<{inputArgs[2]}> [<s>]");
 
@@ -61,12 +66,15 @@ class Program
                     Console.WriteLine($"SMA for {symbol}: {sma}");
                 }
                 else
-                      Console.WriteLine("Unknown command");
+                    Console.WriteLine("Unknown command");
 
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"An error occurred: {ex.Message}");
+            }
+            finally { 
+                CryptoClientService.IsConsoleStart = false; 
             }
         }
 
@@ -82,13 +90,13 @@ class Program
             })
             .ConfigureServices((context, services) =>
             {
-                var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
-
                 services.AddScoped<ICryptoService, CryptoService>();
+                services.AddScoped<ILogger, Logger<CryptoService>>();
                 services.AddScoped(typeof(IRepositoryService<>), typeof(RepositoryService<>));
 
                 services.AddHostedService<CryptoClientService>();
 
+                var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
                 services.AddDbContext<CryptoDbContextService>(options =>
                     options.UseSqlServer(connectionString));
 

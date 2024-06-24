@@ -1,6 +1,10 @@
 using Vsg.Services;
 using Microsoft.EntityFrameworkCore;
 using Vsg.Console;
+using Serilog;
+using Vsg.Web.Api;
+
+#region Host Building Services 
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +14,8 @@ builder.Services.AddControllers()
 builder.Services.AddDbContext<CryptoDbContextService>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
         sqlOptions => sqlOptions.CommandTimeout(300)));
+
+builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
 
 builder.Services.AddMemoryCache();
 
@@ -23,6 +29,9 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+#endregion
+
+#region App Usings
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -31,6 +40,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseSerilogRequestLogging();
+
+var logger = app.Services.GetRequiredService<Serilog.ILogger>();
+app.ConfigureCustomExceptionHandler(logger);
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
@@ -38,3 +52,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+#endregion

@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 using System.Linq.Expressions;
+using Vsg.DataModels;
 
 namespace Vsg.Services
 {
@@ -8,7 +8,7 @@ namespace Vsg.Services
     /// Generic repository service.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class RepositoryService<T> : IRepositoryService<T> where T : class 
+    public class RepositoryService<T> : IRepositoryService<T> where T : CryptoBase
     {
         protected readonly DbSet<T> _entities;
         private readonly CryptoDbContextService _context;
@@ -19,14 +19,29 @@ namespace Vsg.Services
             _entities = context.Set<T>();
         }
 
+        /// <summary>
+        /// Get first or default(null) using filter.
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <returns></returns>
         public T? FirstOrDefault(Expression<Func<T, bool>> filter)
         {
             return _entities.FirstOrDefault<T>(filter);
         }
 
-        public CryptoDbContextService GetContext()
+        /// <summary>
+        /// Get last avg id.
+        /// </summary>
+        public int GetMaxAvgId
         {
-            return _context;
+            get
+            {
+                var id = _entities.Any()
+                               ? _entities.Max(p => p.IdAvg)
+                               : 0;
+
+                return id++;
+            }
         }
 
         /// <summary>

@@ -42,5 +42,11 @@ namespace Vsg.DataModels
 
         [JsonPropertyName("k")]
         public KlineDetails? Details { get; set; }
+
+        [JsonPropertyName("code")]
+        public int ErrorCode { get; set; }
+
+        [JsonPropertyName("msg")]
+        public string? ErrorMessage { get; set; }
     }
 }
