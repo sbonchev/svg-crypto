@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Net.WebSockets;
 using System.Text.Json;
 using Vsg.DataModels;
 using Vsg.Services;
@@ -19,8 +18,16 @@ namespace Vsg.Console
         private readonly ILogger<ICryptoService> _logger;
         private readonly IConfiguration _config;
         private int Tdelay = 1000;
-        public static bool IsConsoleStart = false;
+        private CancellationTokenSource _cts = new();
+        private bool _isRun = false;
 
+        /// <summary>
+        /// Get cancelation token control from outside.
+        /// </summary>
+        internal CancellationTokenSource CancellationTS => _cts;
+
+        internal bool IsRunning => _isRun;
+        
         public CryptoClientService(IServiceProvider serviceProvider, ILogger<ICryptoService> logger, IConfiguration config)
         {
             _serviceProvider = serviceProvider;
@@ -62,30 +69,47 @@ namespace Vsg.Console
             }
         }
 
+        /// <summary>
+        /// Exec background worker task async.
+        /// </summary>
+        /// <param name="cancelToken">Cancelation token.</param>
+        /// <returns></returns>
         protected override async Task ExecuteAsync(CancellationToken cancelToken)
         {
+            
             using (var client = new WebsocketClient(new Uri(GetUrl)))
             {
-                client.MessageReceived.Subscribe(msg => HandleMessage(msg.Text), cancelToken);
-
-                await client.Start();
-
-                while (!cancelToken.IsCancellationRequested)
+                try
                 {
-                    if(!IsConsoleStart && !client.IsStarted)
+                    client.MessageReceived.Subscribe(async msg =>  await HandleMessageAsync(msg.Text), cancelToken);
+                    await client.Start();
+                    _isRun = true;
+                    while (!cancelToken.IsCancellationRequested)
                     {
-                        await client.Start();
+                        cancelToken = CancellationTS.Token;
+
+                        await Task.Delay(Tdelay, cancelToken);
                     }
-                    if(IsConsoleStart && client.IsStarted)
-                    {
-                         await client.Stop(WebSocketCloseStatus.NormalClosure, "Vsg.Console app working...");
-                    }
-                    await Task.Delay(Tdelay);
-                } 
+                }
+                catch (OperationCanceledException ex)
+                {   // shouldn't exit with a non-zero exit code. In other words, this is expected...
+                    _logger.LogError(ex, $"Crypto Client Background Service Has Been Stopped!");
+                    // --- MUST BE RE INIT THE CT!:
+                    _cts = new();
+                    // --- Be canceled:
+                    _isRun = false;
+
+                    throw;
+                }
             }
         }
 
-        private void HandleMessage(string? message)
+        /// <summary>
+        /// Handle every new Biance record to Db.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        private async Task HandleMessageAsync(string? message)
         {
             if (string.IsNullOrEmpty(message))
                 return;
@@ -119,7 +143,7 @@ namespace Vsg.Console
                     if (crp == null) // -- checks if CryptoPrices entity is unique
                     {
                         priceCrypto.IdAvg = priceRepository.GetMaxAvgId;
-                        priceRepository.UpdInertAsync(priceCrypto).Wait();
+                        await priceRepository.UpdInertAsync(priceCrypto).ConfigureAwait(false);
                     }
                 }
             }
