@@ -24,7 +24,7 @@ namespace Vsg.Web.Api.Controllers
             try
             {
                 _logger.LogInformation($"Get 24h Avgerage Price for: {symbol}");
-                var result = await _serviceCrypto.Get24hAvgPriceAsync(symbol);
+                var result = await Task.Run(() => _serviceCrypto.Get24hAvgPriceAsync(symbol));
 
                 return Ok(result);
             }
@@ -37,14 +37,14 @@ namespace Vsg.Web.Api.Controllers
 
         [HttpGet("{symbol}/GetSimpleAvgMoving")]
         public async Task<IActionResult> GetSimpleAvgMoving(string symbol, //-- model required
-                                                            [BindRequired, FromQuery] int n, 
-                                                            [BindRequired, FromQuery] string p, 
-                                                            [FromQuery] DateTime? s)
+                                                            [BindRequired, FromQuery(Name = "intervals_count")] int n, 
+                                                            [BindRequired, FromQuery(Name = "biance_period")] string p, 
+                                                            [FromQuery(Name = "from_date YYYY-MM-DD")] DateTime? s)
         {
             try
             {
                 _logger.LogInformation($"Get Simple Avgerage Price for: currency-{symbol}, count-{n}, period-{p}, set date:{s}");
-                var result = await _serviceCrypto.GetSimpleMovingAvgAsync(symbol, n, p, s);
+                var result = await Task.Run(() => _serviceCrypto.GetSimpleMovingAvgAsync(symbol, n, p, s));
 
                 return Ok(result);
             }

@@ -18,7 +18,6 @@ namespace Vsg.Services
 
         public CryptoService(IRepositoryService<CryptoPrices> priceRepository, IMemoryCache cache, IConfiguration config)
         {
-
             _priceRepository = priceRepository;
             _cache = cache;
             _config = config;
@@ -31,7 +30,7 @@ namespace Vsg.Services
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<decimal> Get24hAvgPriceAsync(string symbol)
+        public decimal Get24hAvgPriceAsync(string symbol)
         {
             symbol = CheckCryptoSymbol(symbol);
             var cacheKey = $"{symbol}_24hAvgPrice";
@@ -40,20 +39,8 @@ namespace Vsg.Services
                 return cachedPrice;
             }
             try
-            {
-                var srvResult = await _priceRepository.GetAllAsync(crp => crp.Symbol == symbol
-                                                                  && crp.Interval == $"1{TimeIntervals.h}");
-                var maxAvgId = srvResult.GroupBy(g => new { g.Symbol, g.Interval, g.CloseTime })
-                                         .Select(grp => grp.Max(m => m.IdAvg));
-                var avgPrices = srvResult.Where(dp => maxAvgId.Contains(dp.IdAvg))
-                                         .OrderBy(t => t.LastPrice)
-                                         .Select(p => p.LastPrice);
-                var hDatePointCount = avgPrices.Count();
-                if (hDatePointCount < 1)
-                    throw new ArgumentException($"Not sufficient date-points for crypto currency: {symbol}!");
-                // --- By the task requirement: "average price for the last 24h of data in the database ( or the oldest available, if 24h of data is not available )"
-                var avgPrice = avgPrices.TakeLast(hDatePointCount>24?24:hDatePointCount)
-                                        .Average();
+            {                
+                var avgPrice = _priceRepository.Get24hAvgPriceAsync(symbol);
                 _cache.Set(cacheKey, avgPrice, TimeSpan.FromMinutes(CashTime));
 
                 return avgPrice;
@@ -74,17 +61,14 @@ namespace Vsg.Services
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<decimal> GetSimpleMovingAvgAsync(string symbol, int n, string p, DateTime? s)
+        public decimal GetSimpleMovingAvgAsync(string symbol, int n, string p, DateTime? s)
         {
             symbol = CheckCryptoSymbol(symbol);
-            var period = p.ToLower().Trim();
+            string period = p.ToLower().Trim();
             bool isPeriod = period == "1w" || period == "1d" || period == "1m" || period == "5m" || period == "30m";
             if (!isPeriod)
-            {
                 throw new ArgumentException($"Invalid time period {period}, (SMA valid periods are: 1w, 1d, 1m, 5m, 30m).");
-            };
-            //if (_cache.TryGetValue($"{symbol}_SimpleMovingAvg", out decimal cachedPrice))
-            //    return cachedPrice;
+
             try
             {
                 bool isStartFromNow = false;
@@ -100,25 +84,8 @@ namespace Vsg.Services
                     dtStartStamp = new DateTimeOffset(startDt.Year, startDt.Month, startDt.Day, 0, 0, 0, TimeSpan.Zero)
                                        .ToUnixTimeMilliseconds();
                 }
-                var dataPoints = await _priceRepository.GetAllAsync(crp => crp.Symbol == symbol
-                                                                    && (isStartFromNow
-                                                                    ? crp.CloseTime <= dtStartStamp
-                                                                    : crp.CloseTime >= dtStartStamp)
-                                                                    && crp.Interval == period);
-                var maxAvgId = dataPoints.GroupBy(g => new { g.Symbol, g.Interval, g.CloseTime })
-                                         .Select(grp => grp.Max(m => m.IdAvg));
-
-                var avgPrices = dataPoints.Where(dp => maxAvgId.Contains(dp.IdAvg))
-                                          .OrderBy(t => t.LastPrice)
-                                          .Select(p => p.LastPrice);
-
-                if (avgPrices.Count() < n)
-                    throw new ArgumentException($"Not sufficient date-points for crypto currency crypto-symbol: {symbol}, period: {p}, count: {n}!");
-
-                var avgSimplePrice = avgPrices.TakeLast(n).Average();
-                //_cache.Set($"{symbol}_SimpleMovingAvg", avgSimplePrice, TimeSpan.FromMinutes(CashTime));
-
-                return avgSimplePrice;
+                
+                return _priceRepository.GetSimpleMovingAvgAsync(symbol, n, period, dtStartStamp, isStartFromNow);
             }
             catch (Exception ex)
             {
@@ -130,13 +97,14 @@ namespace Vsg.Services
         {
             symbol = symbol.ToLower().Trim();
             var cryptos = _config.GetSection("DefCryptoCurrences")?
-                                     .Value?.Split(",").ToList<string>(); // -- ex.: "btcusdt", "adausdt", "ethusdt"
+                                 .Value?.Split(",").ToList(); // -- ex.: "btcusdt", "adausdt", "ethusdt"
 
             if (string.IsNullOrEmpty(symbol) || cryptos == null || cryptos.Count < 1 || !cryptos.Contains(symbol))
                 throw new ArgumentException($"There is no valid crypto-currency value (symbol: {symbol}) definded into appsettings config!");
 
             return symbol;
         }
+
     }
 }
 

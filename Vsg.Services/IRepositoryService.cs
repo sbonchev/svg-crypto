@@ -37,5 +37,11 @@ namespace Vsg.Services
         /// <param name="entity"></param>
         /// <returns></returns>
         Task DeleteAsync(T entity);
+
+        decimal Get24hAvgPriceAsync(string symbol);
+
+        decimal GetSimpleMovingAvgAsync(string symbol, int count, string period, long dtStartStamp, bool isStartFromNow);
+
+        void Dispose();
     }
 }

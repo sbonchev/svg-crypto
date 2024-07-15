@@ -18,21 +18,15 @@ namespace Vsg.Console
         private readonly ILogger<ICryptoService> _logger;
         private readonly IConfiguration _config;
         private int Tdelay = 1000;
-        private CancellationTokenSource _cts = new();
+        private CancellationTokenSource _cts;
         private bool _isRun = false;
-
-        /// <summary>
-        /// Get cancelation token control from outside.
-        /// </summary>
-        internal CancellationTokenSource CancellationTS => _cts;
-
-        internal bool IsRunning => _isRun;
         
         public CryptoClientService(IServiceProvider serviceProvider, ILogger<ICryptoService> logger, IConfiguration config)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
             _config = config;
+            _cts = new();
         }
 
         /// <summary>
@@ -69,6 +63,30 @@ namespace Vsg.Console
             }
         }
 
+        internal async Task<string> ToBeRun()
+        {
+            if (!_isRun)
+            {
+                _cts = new(); // --- MUST BE RE INIT THE CT!:
+                await StartAsync(_cts.Token);
+                return "BackgroundService is running!";
+            }  
+            else
+                return "BackgroundService has already been run!";
+        }
+
+        internal string ToBeStopped()
+        {
+            if (_isRun)
+            {
+                _cts.Cancel();
+                return "BackgroundService will be stopped!";
+            }
+               
+            else
+                return "BackgroundService cannot be canceled because is not run!";
+        }
+
         /// <summary>
         /// Exec background worker task async.
         /// </summary>
@@ -86,8 +104,6 @@ namespace Vsg.Console
                     _isRun = true;
                     while (!cancelToken.IsCancellationRequested)
                     {
-                        cancelToken = CancellationTS.Token;
-
                         await Task.Delay(Tdelay, cancelToken);
                     }
                 }
@@ -95,7 +111,7 @@ namespace Vsg.Console
                 {   // shouldn't exit with a non-zero exit code. In other words, this is expected...
                     _logger.LogError(ex, $"Crypto Client Background Service Has Been Stopped!");
                     // --- MUST BE RE INIT THE CT!:
-                    _cts = new();
+                    //_cts = new();
                     // --- Be canceled:
                     _isRun = false;
 
@@ -163,7 +179,6 @@ namespace Vsg.Console
                 return;
             }
         }
-
         
     }
 
