@@ -1,6 +1,33 @@
 # Vsg.CryptoBinanceApi
 
 Vsg.CryptoBinanceApi is a extensible solution based on Binance Crypto-Socket for providing real-time and historical cryptocurrency price data. It comprises a web API (`Vsg.Web.Api`) for serving prices data and also a console application (`Vsg.Console`) for command-line interactions including a background service for collecting historical crypto data. The application structure consists also class libraries for managing the data logic and utility help services.
+It covers the following requirements:
+
+* Uses the Binance WebSocket API to collect price data for the certain symbols [BTCUSDT, ADAUSDT, ETHUSDT...]
+  using ( [https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md](https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md) )
+  * Store the price information for the symbols in a relational database ( feel free to use any approach at all for data storage, including an ORM )
+  * Create an HTTP API which can accept and return both XML and JSON ( depending on `Content-Type` Header ) with the following endpoints:
+    * `GET /api/{symbol}/24hAvgPrice` - Returns the average price for the last 24h of data in the database ( or the oldest available, if 24h of data is not available )
+      * `{symbol}` - The symbol the average price is being calculated for
+    * `GET /api/{symbol}/SimpleMovingAverage?n={numberOfDataPoints}&p={timePeriod}&s=[startDateTime]` - Return the current Simple Moving average of the symbol's price ( More info: [Investopedia](https://www.investopedia.com/terms/s/sma.asp#:~:text=A%20simple%20moving%20average%20(SMA)%20is%20an%20arithmetic%20moving%20average,periods%20in%20the%20calculation%20average.))
+      * `{symbol}` - The symbol the average price is being calculated for
+      * `n` - The amount of data points
+      * `p` - The time period represented by each data point. Acceptable values: `1w`, `1d`, `30m`, `5m`, `1m`
+      * `s` - The datetime from which to start the SMA calculation ( a date )
+      
+      Examples:
+      * `/api/BTCUSDT/SimpleMovingAverage?n=10&p=1d&s=2021-12-15`
+        Explanation: Fetch the simple moving average of the BTCUSDT symbol from the last 10 days, starting on the 15th of december, 2021
+      * `/api/ADAUSDT/SimpleMovingAverage?n=100&p=1w`
+        Explanation: Fetch the simple moving average of the ADAUSDT symbol from the last 100 weeks, starting on the current date
+      * `/api/ETHUSDT/SimpleMovingAverage?n=200&p=5m`
+        Explanation: Fetch the simple moving average of the ETHUSDT symbol from the last 200 5 minute intervals, starting on the current date
+          
+  * Use caching on the backend to improve the performance of the application where applicable
+  * Also, create a Console application, which can execute the following commands:
+    * `24h {symbol}` - Same as the `/api/{symbol}/24hAvgPrice` endpoint
+    * `sma {symbol} {n} {p} {s}` - Same as the `/api/{symbol}/SimpleMovingAverage` endpoint
+    * Manual handling the Background tracking data storage service (start/stop).
 
 ## Introduction
 Vsg.CryptoBinanceApi is an implementation based on the Binance web-socket-streams solution 
@@ -84,8 +111,8 @@ n=the number of total periods
 * CryptoClientService works as a BackgroundService for collecting the Biance-socket information for the required crypto currences (**"btcusdt", "adausdt", "ethusdt"**) and related periods (1w, 1d, 1h*, 30m, 5m, 1m), [1h]* period has been added because of 24h calculating task issue:
 - create Biance-Kline url: wss://stream.binance.com:9443/ws/btcusdt@kline_1M/adausdt@kline_1M/ethusdt@kline_1M/btcusdt@kline_1w/adausdt@kline_1w/ethusdt@kline_1w/btcusdt@kline_1h/adausdt@kline_1h/ethusdt@kline_1h/btcusdt@kline_1d/adausdt@kline_1d/ethusdt@kline_1d/btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_30m/adausdt@kline_1m/adausdt@kline_5m/adausdt@kline_30m/ethusdt@kline_1m/ethusdt@kline_5m/ethusdt@kline_30m
 * Console application also provides execution the following commands:
-24h {symbol} - Same as the /api/{symbol}/24hAvgPrice endpoint by Get24hAvgPrice
-sma {symbol} {n} {p} {s} - Same as the /api/{symbol}/SimpleMovingAverage endpoint by GetSimpleMovingAvgAsync
+- 24h {symbol} - Same logic as the /api/{symbol}/24hAvgPrice endpoint by Get24hAvgPrice
+- SMA {symbol} {n} {p} [{s}] - Same logic as the /api/{symbol}/SimpleMovingAverage endpoint by GetSimpleMovingAvgAsync
 
 ### 4. Vsg.Web.Api HTTP API implemented in BianceCryptoController which can accept and return both XML and JSON ( depending on Content-Type Header ) with the following endpoints:
 * 4.1. GET /api/{symbol}/24hAvgPrice - Returns the average price for the last 24h of data in the database ( or the oldest available, if 24h of data is not available ) 
