@@ -57,52 +57,51 @@ namespace Vsg.Services
         }
 
         public decimal Get24hAvgPriceAsync(string symbol)
-        {                                          
-            var maxAvgIds = _entities
-                .GroupBy(g => new { g.Symbol, g.Interval, g.CloseTime })
-                .Where(crp => crp.Key.Symbol == symbol
-                              && crp.Key.Interval == $"1{TimeIntervals.h}")
-                .Select(grp => grp.Max(m => m.IdAvg))
-                .Distinct();
-
-            var avgPrices = _entities.Where(dp => maxAvgIds.Contains(dp.IdAvg) 
-                                                && dp.Symbol == symbol
-                                                && dp.Interval == $"1{TimeIntervals.h}")
-                                     .OrderBy(t => t.CloseTime)
-                                     .Select(p => p.LastPrice);
-            int hDatePointCount = avgPrices.Count();
-            if (hDatePointCount < 1)
-                throw new ArgumentException($"Not sufficient date-points for crypto currency: {symbol}!");
+        {
+            // --- Get all data points filter candidates:
+            var dataPoints = _entities.Where(dp => dp.Symbol == symbol
+                                                && dp.Interval == $"1{TimeIntervals.h}");
+            // --- Get all unique max IdAvg values:
+            var maxAvgIds = dataPoints.GroupBy(g => new { g.Symbol, g.Interval, g.CloseTime })
+                                      .Select(grp => grp.Max(m => m.IdAvg))
+                                      .Distinct(); 
+            // --- Get LastPrice coresponding to {all unique max IdAvg values} order by desc:
+            var avgPrices = dataPoints.Where(dp => maxAvgIds.Contains(dp.IdAvg))
+                                      .OrderByDescending(t => t.CloseTime)
+                                      .Select(p => p.LastPrice); 
             // --- By the task requirement: "average price for the last 24h of data in the database (or the oldest available, if 24h of data is not available )"
-            int dtPoints = hDatePointCount > 24 ? 24 : hDatePointCount;
-            var avgPrice = avgPrices.ToList()
-                                    .TakeLast(dtPoints)
-                                    .Average();
+            var avgPrice = avgPrices.Take(24) // --- for the last 24h
+                                    .ToList();
+            if (avgPrice.Count < 1)
+                throw new ArgumentException($"Not sufficient date-points for crypto currency: {symbol}!");
 
-            return avgPrice;
+            return avgPrice.Average();
         }
 
         public decimal GetSimpleMovingAvgAsync(string symbol, int count, string period, long dtStartStamp, bool isStartFromNow)
         {
-                var dataPoints = _entities.Where(crp => crp.Symbol == symbol
+            // --- Get all dataPoints candidates:
+            var dataPoints = _entities.Where(crp => crp.Symbol == symbol
                                                 && (isStartFromNow
                                                 ? crp.CloseTime <= dtStartStamp
                                                 : crp.CloseTime >= dtStartStamp)
                                                 && crp.Interval == period);
+            // --- Get all unique max IdAvg values among the selected dataPoints:
+            var maxAvgId = dataPoints.GroupBy(g => new { g.Symbol, g.Interval, g.CloseTime })
+                                     .Select(grp => grp.Max(m => m.IdAvg))
+                                     .Distinct();
+            // --- Get all LastPrice in desk order coresponding to {all unique max IdAvg values}
+            var avgPrices = dataPoints.Where(dp => maxAvgId.Contains(dp.IdAvg))
+                                      .OrderByDescending(t => t.CloseTime)
+                                      .Select(p => p.LastPrice)
+                                      .Take(count)
+                                      .ToList();
 
-                var maxAvgId = dataPoints.GroupBy(g => new { g.Symbol, g.Interval, g.CloseTime })
-                                         .Select(grp => grp.Max(m => m.IdAvg));
+           if (avgPrices.Count() < 1)
+                    throw new ArgumentException("Not sufficient date-points for crypto currency \n" +
+                                                $"crypto-symbol: {symbol}, period: {period}, count: {count} and date time stamp: [{dtStartStamp}]!");
 
-                var avgPrices = dataPoints.Where(dp => maxAvgId.Contains(dp.IdAvg))
-                                          .OrderBy(t => t.CloseTime)
-                                          .Select(p => p.LastPrice);
-
-                if (avgPrices.Count() < count)
-                    throw new ArgumentException($"Not sufficient date-points for crypto currency crypto-symbol: {symbol}, period: {period}, count: {count}!");
-
-               return avgPrices.ToList()
-                               .TakeLast(count)
-                               .Average();
+           return avgPrices.Average();
         }
 
 

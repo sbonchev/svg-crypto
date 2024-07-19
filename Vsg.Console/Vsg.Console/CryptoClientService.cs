@@ -75,7 +75,7 @@ namespace Vsg.Console
                 return "BackgroundService has already been run!";
         }
 
-        internal string ToBeStopped()
+        public string ToBeStopped()
         {
             if (_isRun)
             {
@@ -99,9 +99,13 @@ namespace Vsg.Console
             {
                 try
                 {
+                    if (_cts.Token != cancelToken) // --- in case if we want to cancel it via API!
+                        cancelToken = _cts.Token;
+
                     client.MessageReceived.Subscribe(async msg =>  await HandleMessageAsync(msg.Text), cancelToken);
                     await client.Start();
                     _isRun = true;
+
                     while (!cancelToken.IsCancellationRequested)
                     {
                         await Task.Delay(Tdelay, cancelToken);
@@ -110,12 +114,9 @@ namespace Vsg.Console
                 catch (OperationCanceledException ex)
                 {   // shouldn't exit with a non-zero exit code. In other words, this is expected...
                     _logger.LogError(ex, $"Crypto Client Background Service Has Been Stopped!");
-                    // --- MUST BE RE INIT THE CT!:
-                    //_cts = new();
                     // --- Be canceled:
                     _isRun = false;
-
-                    throw;
+                    //throw;
                 }
             }
         }

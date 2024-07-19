@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Vsg.Console;
 using Vsg.Services;
 
 namespace Vsg.Web.Api.Controllers
@@ -9,12 +10,14 @@ namespace Vsg.Web.Api.Controllers
     [Produces("application/json", "application/xml")]
     public class BinanceCryptoController : ControllerBase
     {
+        private readonly IServiceProvider _serviceProvider;
         private readonly ICryptoService _serviceCrypto;
         private readonly ILogger<ICryptoService> _logger;
 
-        public BinanceCryptoController(ICryptoService serviceProvider, ILogger<ICryptoService> logger)
+        public BinanceCryptoController(ICryptoService serviceCrypto, IServiceProvider serviceProvider, ILogger<ICryptoService> logger)
         {
-            _serviceCrypto = serviceProvider;
+            _serviceProvider = serviceProvider;
+            _serviceCrypto = serviceCrypto;
             _logger = logger;
         }
 
@@ -37,8 +40,8 @@ namespace Vsg.Web.Api.Controllers
 
         [HttpGet("{symbol}/GetSimpleAvgMoving")]
         public async Task<IActionResult> GetSimpleAvgMoving(string symbol, //-- model required
-                                                            [BindRequired, FromQuery(Name = "intervals_count")] int n, 
-                                                            [BindRequired, FromQuery(Name = "biance_period")] string p, 
+                                                            [BindRequired, FromQuery(Name = "intervals_count")] int n,
+                                                            [BindRequired, FromQuery(Name = "biance_period")] string p,
                                                             [FromQuery(Name = "from_date YYYY-MM-DD")] DateTime? s)
         {
             try
@@ -52,10 +55,45 @@ namespace Vsg.Web.Api.Controllers
             {
                 _logger.LogError(ex, $"Error exec GetSimpleAvgMoving for crypto currency {symbol}!");
                 return StatusCode(500, new { error = $"Internal error SMA-symbol:{symbol}, period:{p}, count:{n}, date:{s}!",
-                                             details = ex.Message });
+                    details = ex.Message });
             }
         }
+
+
+        [HttpGet("StopBgs")]
+        public IActionResult StopBgs()
+        {
+            try
+            {
+                string msgResult;
+                using (var scope = _serviceProvider.CreateScope())
+                {
+                    var cryptoClientService = scope.ServiceProvider
+                              .GetServices<IHostedService>()
+                              .OfType<CryptoClientService>()
+                              .Single();
+                    msgResult = cryptoClientService.ToBeStopped();
+                }
+                _logger.LogInformation($"Background service worker cancelation: \n {msgResult}");
+
+                return Ok(msgResult);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error on Background service worker cancelation!");
+                return StatusCode(500, new
+                {
+                    error = $"Internal error on Background service worker cancelation!",
+                    details = ex.Message
+                });
+            }
+        }
+
     }
 
+   
 
 }
+
+
+

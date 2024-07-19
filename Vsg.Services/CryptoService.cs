@@ -63,6 +63,7 @@ namespace Vsg.Services
         /// <exception cref="Exception"></exception>
         public decimal GetSimpleMovingAvgAsync(string symbol, int n, string p, DateTime? s)
         {
+            (_cache as MemoryCache)?.Clear();
             symbol = CheckCryptoSymbol(symbol);
             string period = p.ToLower().Trim();
             bool isPeriod = period == "1w" || period == "1d" || period == "1m" || period == "5m" || period == "30m";
@@ -73,18 +74,19 @@ namespace Vsg.Services
             {
                 bool isStartFromNow = false;
                 long dtStartStamp;
+                DateTime startDt;
                 if (s == null) //-- Get DateTime Now
                 {
-                    dtStartStamp = DateTimeOffset.Now.ToUnixTimeMilliseconds(); 
+                    startDt = DateTime.Now; 
                     isStartFromNow = true;
                 }
                 else //-- user def. DateTime
                 {
-                    DateTime startDt = s.Value;
-                    dtStartStamp = new DateTimeOffset(startDt.Year, startDt.Month, startDt.Day, 0, 0, 0, TimeSpan.Zero)
-                                       .ToUnixTimeMilliseconds();
+                    startDt = s.Value;
                 }
-                
+                dtStartStamp = new DateTimeOffset(startDt.Year, startDt.Month, startDt.Day, 0, 0, 0, TimeSpan.Zero)
+                                                 .ToUnixTimeMilliseconds();
+
                 return _priceRepository.GetSimpleMovingAvgAsync(symbol, n, period, dtStartStamp, isStartFromNow);
             }
             catch (Exception ex)
