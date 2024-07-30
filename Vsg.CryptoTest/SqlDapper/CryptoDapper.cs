@@ -22,8 +22,6 @@ namespace Vsg.CryptoUTests.SqlDapper
         /// <returns></returns>
         internal decimal Get24hAvgPrice(string symbol)
         {
-            _sb.Clear();
-
             _sb.AppendLine("SELECT TOP 24 [c].[LastPrice] ");
             _sb.AppendLine("FROM [CryptoPrices] AS [c] ");
             _sb.AppendLine("WHERE [c].[Symbol] = @Symbol ");
@@ -36,6 +34,7 @@ namespace Vsg.CryptoUTests.SqlDapper
             _sb.AppendLine("ORDER BY [c].[CloseTime] DESC");
 
             var sql = _sb.ToString();
+            _sb.Clear();
             var prms = new DynamicParameters();
             prms.Add("@Symbol", symbol, DbType.String, ParameterDirection.Input);
 
@@ -56,9 +55,9 @@ namespace Vsg.CryptoUTests.SqlDapper
                                   : date;
             var dtStartStamp = new DateTimeOffset(dt.Value.Year, dt.Value.Month, dt.Value.Day, 0, 0, 0, TimeSpan.Zero)
                                        .ToUnixTimeMilliseconds();
-            var andDate = date == null ? "AND [c].[CloseTime] <= @dtStartStamp "
-                                       : "AND [c].[CloseTime] >  @dtStartStamp ";
-            _sb.Clear();
+            
+            var andDate = date == null ? "AND [CloseTime] <= @dtStartStamp "
+                                       : "AND [CloseTime] >=  @dtStartStamp ";
 
             _sb.AppendLine($"SELECT TOP {count} [c].[LastPrice] ");
             _sb.AppendLine("FROM [CryptoPrices] AS [c] ");
@@ -69,12 +68,13 @@ namespace Vsg.CryptoUTests.SqlDapper
             _sb.AppendLine("  ( SELECT DISTINCT MAX([c0].[IdAvg]) ");
             _sb.AppendLine("    FROM [CryptoPrices] AS [c0] ");
             _sb.AppendLine("    WHERE [c0].[Symbol] = @symbol ");
-            _sb.AppendLine(     andDate );
+            _sb.AppendLine($"   {andDate} ");
             _sb.AppendLine("    AND [c0].[Interval] = @period ");
             _sb.AppendLine("    GROUP BY [c0].[Symbol], [c0].[Interval], [c0].[CloseTime] ) ");
             _sb.AppendLine("ORDER BY [c].[CloseTime] DESC ");
 
             var sql = _sb.ToString();
+            _sb.Clear();
             var prms = new DynamicParameters();
             prms.Add("@symbol", symbol, DbType.String, ParameterDirection.Input);
             prms.Add("@period", period, DbType.String, ParameterDirection.Input);

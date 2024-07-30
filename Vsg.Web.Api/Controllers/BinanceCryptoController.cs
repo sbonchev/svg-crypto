@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Vsg.Console;
@@ -13,14 +15,36 @@ namespace Vsg.Web.Api.Controllers
         private readonly IServiceProvider _serviceProvider;
         private readonly ICryptoService _serviceCrypto;
         private readonly ILogger<ICryptoService> _logger;
+        private readonly AuthJwt _authJwt;
 
-        public BinanceCryptoController(ICryptoService serviceCrypto, IServiceProvider serviceProvider, ILogger<ICryptoService> logger)
+        public BinanceCryptoController(ICryptoService serviceCrypto, IServiceProvider serviceProvider, 
+                                       ILogger<ICryptoService> logger, AuthJwt authJwt)
         {
             _serviceProvider = serviceProvider;
             _serviceCrypto = serviceCrypto;
             _logger = logger;
+            _authJwt = authJwt;
         }
 
+        /// <summary>
+        /// Get a JWT secret token for authorization.
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost("GetToken")]
+        public IResult GetToken()
+        {
+            try
+            {
+                return Results.Ok(_authJwt.GetJwt);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Get JWT Authorization Error!");
+                return Results.Problem($"Get JWT Authorization Error! \n {ex.Message}");
+            }
+        }
+
+        [Authorize()]
         [HttpGet("{symbol}/24hAvgPrice")]
         public async Task<IActionResult> Get24hAvgPrice(string symbol)
         {
@@ -38,6 +62,7 @@ namespace Vsg.Web.Api.Controllers
             }
         }
 
+        [Authorize()]
         [HttpGet("{symbol}/GetSimpleAvgMoving")]
         public async Task<IActionResult> GetSimpleAvgMoving(string symbol, //-- model required
                                                             [BindRequired, FromQuery(Name = "intervals_count")] int n,

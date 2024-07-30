@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using System.Net.Http.Headers;
 using Vsg.CryptoUTests.SqlDapper;
 
 namespace Vsg.CryptoTest
@@ -30,6 +31,10 @@ namespace Vsg.CryptoTest
             _cryptoDapper = new CryptoDapper(connString);
 
             _httpClient = new();
+            _httpClient.DefaultRequestHeaders.Accept.Clear();
+            _httpClient.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue { NoCache = true };
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + config["JWT"]!);
         }
 
         /// <summary>
@@ -107,21 +112,26 @@ namespace Vsg.CryptoTest
 
         private async Task GetSmaAsync(string symbol, int count, string period, DateOnly? date = null)
         {
-            var dt = date == null ? ""
-                                  : date.Value.ToString("yyyy-MM-dd");
-            using var response = await _httpClient.GetAsync($"{_url}{symbol}/GetSimpleAvgMoving?intervals_count={count}&biance_period={period}&from_date={dt}");
-            response.EnsureSuccessStatusCode();
-            var responseBody = await response.Content.ReadAsStringAsync();
+            var url = $"{_url}{symbol}/GetSimpleAvgMoving?intervals_count={count}&biance_period={period}";
+            if (date != null)
+                url += $"&from_date={date.Value.ToString("yyyy-MM-dd")}";
 
-            Assert.False(responseBody == null, "Invalid Sma BinanceCrypto Response!");
-            Assert.True(response.StatusCode == System.Net.HttpStatusCode.OK, "Get SMA Failed!");
+            _httpClient.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue { NoCache = true };
+            using (var response = await _httpClient.GetAsync(url).ConfigureAwait(false))
+            {
+                response.EnsureSuccessStatusCode();
+                var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-            decimal priceCryptoApi = Convert.ToDecimal(responseBody);
-            decimal priceDb = _cryptoDapper.GetSma(symbol, count, period, date);
-            var queryDt = date ?? DateOnly.FromDateTime(DateTime.Now);
-            Assert.IsTrue(priceCryptoApi == priceDb,
-                $"For Symbol: {symbol}, for count: {count}, for period: {period}, for date: {queryDt} \n " +
-                $"Both prices: {priceCryptoApi} and {priceDb} should be equal if there is no cashing!");
+                Assert.False(responseBody == null, "Invalid Sma BinanceCrypto Response!");
+                Assert.True(response.StatusCode == System.Net.HttpStatusCode.OK, "Get SMA Failed!");
+
+                decimal priceCryptoApi = Convert.ToDecimal(responseBody);
+                decimal priceDb = _cryptoDapper.GetSma(symbol, count, period, date);
+
+                Assert.IsTrue(priceCryptoApi == priceDb,
+                    $"For Symbol: {symbol}, for count: {count}, for period: {period}, for date: {date ?? DateOnly.FromDateTime(DateTime.Now)} \n " +
+                    $"Both prices: {priceCryptoApi} and {priceDb} should be equal if there is no cashing!");
+            }
         }
 
         #endregion
