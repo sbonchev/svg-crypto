@@ -114,7 +114,7 @@ n=the number of total periods
 - 24h {symbol} - Same logic as the /api/{symbol}/24hAvgPrice endpoint by Get24hAvgPrice
 - SMA {symbol} {n} {p} [{s}] - Same logic as the /api/{symbol}/SimpleMovingAverage endpoint by GetSimpleMovingAvgAsync
 
-### 4. Vsg.Web.Api HTTP API implemented in BianceCryptoController which can accept and return both XML and JSON ( depending on Content-Type Header ) with the following endpoints:
+### 4. Vsg.Web.Api HTTP API implemented in BianceCryptoController which can accept and return both XML and JSON ( depending on Content-Type Header ) with the following endpoints working with JWT authorization:
 * 4.1. GET /api/{symbol}/24hAvgPrice - Returns the average price for the last 24h of data in the database ( or the oldest available, if 24h of data is not available ) 
 {symbol} - The symbol average price is being calculated for
 * 4.2. GET /api/{symbol}/SimpleAvgMoving?n={numberOfDataPoints}&p={timePeriod}&s=[startDateTime] - Return the current Simple Moving average of the symbol's price ( More info: Investopedia)
@@ -127,5 +127,7 @@ n=the number of total periods
 * Use MSSQL (Express) Server
 * Restore CryptoServiveDb.sql DB sript (creat DB and inserts historical data for testing) lacated in ./Vsg.DataModels
 * Fix the connection string in appsettings.json with your own proper one.
+* Vsg.Web.Api HTTP API works with JWT authorization - https://jwt.io/
+(please, generate your auth-token calling 'GetToken' action and paste it into appsettings.json for the testing)
    
 
